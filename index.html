@@ -89,8 +89,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        // script.js
-
         document.addEventListener('DOMContentLoaded', (event) => {
             loadInvestmentHistory();
             displaySummary();
@@ -157,12 +155,23 @@
         }
 
         function calculatePricePoints(initialPrice) {
+            const investments = getInvestments();
+            let totalQuantity = 0;
+            let totalInvestmentValue = 0;
+
+            investments.forEach(investment => {
+                if (investment.quantity !== undefined && investment.amount !== undefined) {
+                    totalQuantity += investment.quantity;
+                    totalInvestmentValue += investment.amount;
+                }
+            });
+
             const pricePointsList = document.getElementById('price-points-list');
             pricePointsList.innerHTML = '';
 
             for (let i = 10; i <= 90; i += 10) {
                 const pricePoint = initialPrice * (1 - i / 100);
-                const profitLoss = (pricePoint - initialPrice).toFixed(2);
+                const profitLoss = (pricePoint * totalQuantity - totalInvestmentValue).toFixed(2);
                 const div = document.createElement('div');
                 div.textContent = `Giảm ${i}%: $${pricePoint.toFixed(2)} (Lãi/Lỗ: $${profitLoss})`;
                 pricePointsList.appendChild(div);
@@ -238,6 +247,7 @@
             loadInvestmentHistory();
             displaySummary();
         }
+
 
     </script>
 </body>
