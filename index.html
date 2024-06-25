@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Đầu tư</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .header, .summary, .input-section, .history, .price-points, .profit-loss {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header text-center mb-4">
+            <h1>Quản lý Đầu tư</h1>
+        </div>
+        <div class="summary card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Tổng quan</h4>
+                <p id="total-investment-display">Tổng số vốn: $0.00</p>
+                <p id="total-amount-invested">Tổng số tiền đã đầu tư: $0.00</p>
+                <p id="remaining-amount">Số tiền còn lại: $0.00</p>
+                <p id="average-buy-price">Giá mua trung bình: $0.00</p>
+            </div>
+        </div>
+        <div class="input-section card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Thiết lập tổng số vốn</h4>
+                <div class="form-group">
+                    <input type="number" class="form-control form-control-sm" id="total-investment" placeholder="Nhập tổng số vốn">
+                </div>
+                <button onclick="setTotalInvestment()" class="btn btn-primary btn-sm btn-block">Thiết lập tổng số vốn</button>
+            </div>
+        </div>
+        <div class="input-section card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Thêm khoản đầu tư</h4>
+                <div class="form-group">
+                    <input type="number" class="form-control form-control-sm" id="investment-amount" placeholder="Số tiền đầu tư">
+                </div>
+                <div class="form-group">
+                    <input type="number" class="form-control form-control-sm" id="investment-price" placeholder="Giá đầu tư">
+                </div>
+                <button onclick="addInvestment()" class="btn btn-success btn-sm btn-block">Thêm khoản đầu tư</button>
+            </div>
+        </div>
+        <div class="history card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Lịch sử đầu tư</h4>
+                <ul id="history-list" class="list-group"></ul>
+            </div>
+            <div class="card-footer">
+                <button onclick="clearInvestmentHistory()" class="btn btn-danger btn-sm btn-block">Xóa lịch sử đầu tư</button>
+            </div>
+        </div>
+        <div class="price-points card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Điểm giá</h4>
+                <div id="price-points-list"></div>
+            </div>
+        </div>
+        <div class="profit-loss card mb-4">
+            <div class="card-body">
+                <h4 class="card-title">Tính toán Lãi/Lỗ</h4>
+                <div class="form-group">
+                    <input type="number" class="form-control form-control-sm" id="current-price" placeholder="Giá hiện tại">
+                </div>
+                <button onclick="calculateProfitLoss()" class="btn btn-info btn-sm btn-block">Tính toán Lãi/Lỗ</button>
+                <div id="profit-loss-result" class="mt-3"></div>
+            </div>
+        </div>
+        <div class="reset-all card mb-4">
+            <div class="card-body">
+                <button onclick="resetAll()" class="btn btn-secondary btn-sm btn-block">Đặt lại tất cả</button>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // script.js
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            loadInvestmentHistory();
+            displaySummary();
+        });
+
+        function setTotalInvestment() {
+            const totalInvestmentInput = document.getElementById('total-investment');
+            const totalInvestment = parseFloat(totalInvestmentInput.value);
+
+            if (!isNaN(totalInvestment) && totalInvestment > 0) {
+                localStorage.setItem('totalInvestment', totalInvestment);
+                totalInvestmentInput.value = '';
+                displaySummary();
+            }
+        }
+
+        function addInvestment() {
+            const investmentAmountInput = document.getElementById('investment-amount');
+            const investmentPriceInput = document.getElementById('investment-price');
+            const amount = parseFloat(investmentAmountInput.value);
+            const price = parseFloat(investmentPriceInput.value);
+
+            if (!isNaN(amount) && amount > 0 && !isNaN(price) && price > 0) {
+                const quantity = amount / price;
+                saveInvestment(amount, price, quantity);
+                investmentAmountInput.value = '';
+                investmentPriceInput.value = '';
+                loadInvestmentHistory();
+                displaySummary();
+            }
+        }
+
+        function saveInvestment(amount, price, quantity) {
+            let investments = getInvestments();
+            investments.push({ amount, price, quantity, date: new Date() });
+            localStorage.setItem('investments', JSON.stringify(investments));
+        }
+
+        function getInvestments() {
+            const investments = localStorage.getItem('investments');
+            return investments ? JSON.parse(investments) : [];
+        }
+
+        function loadInvestmentHistory() {
+            const investments = getInvestments();
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+
+            investments.forEach((investment, index) => {
+                if (investment.amount !== undefined && investment.price !== undefined && investment.quantity !== undefined) {
+                    const li = document.createElement('li');
+                    li.textContent = `Khoản đầu tư ${index + 1}: $${investment.amount.toFixed(2)} tại giá $${investment.price.toFixed(2)} (${investment.quantity.toFixed(4)} đơn vị) vào ngày ${new Date(investment.date).toLocaleDateString()}`;
+                    li.classList.add('list-group-item');
+                    historyList.appendChild(li);
+                }
+            });
+
+            if (investments.length > 0) {
+                const firstInvestment = investments[0].price;
+                calculatePricePoints(firstInvestment);
+            } else {
+                clearPricePoints();
+            }
+        }
+
+        function calculatePricePoints(initialPrice) {
+            const pricePointsList = document.getElementById('price-points-list');
+            pricePointsList.innerHTML = '';
+
+            for (let i = 10; i <= 90; i += 10) {
+                const pricePoint = initialPrice * (1 - i / 100);
+                const profitLoss = (pricePoint - initialPrice).toFixed(2);
+                const div = document.createElement('div');
+                div.textContent = `Giảm ${i}%: $${pricePoint.toFixed(2)} (Lãi/Lỗ: $${profitLoss})`;
+                pricePointsList.appendChild(div);
+            }
+        }
+
+        function clearPricePoints() {
+            const pricePointsList = document.getElementById('price-points-list');
+            pricePointsList.innerHTML = '';
+        }
+
+        function calculateProfitLoss() {
+            const currentPriceInput = document.getElementById('current-price');
+            const currentPrice = parseFloat(currentPriceInput.value);
+
+            if (!isNaN(currentPrice) && currentPrice > 0) {
+                const investments = getInvestments();
+                if (investments.length > 0) {
+                    let totalQuantity = 0;
+                    let totalInvestmentValue = 0;
+
+                    investments.forEach(investment => {
+                        if (investment.quantity !== undefined && investment.amount !== undefined) {
+                            totalQuantity += investment.quantity;
+                            totalInvestmentValue += investment.amount;
+                        }
+                    });
+
+                    const profitLoss = (currentPrice * totalQuantity - totalInvestmentValue).toFixed(2);
+                    const resultDiv = document.getElementById('profit-loss-result');
+                    resultDiv.textContent = `Lãi/Lỗ tại giá hiện tại $${currentPrice.toFixed(2)}: $${profitLoss}`;
+                }
+            }
+        }
+
+        function displaySummary() {
+            const totalInvestmentDisplay = document.getElementById('total-investment-display');
+            const totalAmountInvestedDisplay = document.getElementById('total-amount-invested');
+            const remainingAmountDisplay = document.getElementById('remaining-amount');
+            const averageBuyPriceDisplay = document.getElementById('average-buy-price');
+
+            const totalInvestment = parseFloat(localStorage.getItem('totalInvestment')) || 0;
+            const investments = getInvestments();
+
+            let totalAmountInvested = 0;
+            let totalShares = 0;
+
+            investments.forEach(investment => {
+                if (investment.amount !== undefined && investment.quantity !== undefined) {
+                    totalAmountInvested += investment.amount;
+                    totalShares += investment.quantity;
+                }
+            });
+
+            const remainingAmount = totalInvestment - totalAmountInvested;
+            const averageBuyPrice = totalShares > 0 ? (totalAmountInvested / totalShares) : 0;
+
+            totalInvestmentDisplay.textContent = `Tổng số vốn: $${totalInvestment.toFixed(2)}`;
+            totalAmountInvestedDisplay.textContent = `Tổng số tiền đã đầu tư: $${totalAmountInvested.toFixed(2)}`;
+            remainingAmountDisplay.textContent = `Số tiền còn lại: $${remainingAmount.toFixed(2)}`;
+            averageBuyPriceDisplay.textContent = `Giá mua trung bình: $${averageBuyPrice.toFixed(2)}`;
+        }
+
+        function resetAll() {
+            localStorage.removeItem('totalInvestment');
+            localStorage.removeItem('investments');
+            loadInvestmentHistory();
+            displaySummary();
+        }
+
+        function clearInvestmentHistory() {
+            localStorage.removeItem('investments');
+            loadInvestmentHistory();
+            displaySummary();
+        }
+
+    </script>
+</body>
+</html>
